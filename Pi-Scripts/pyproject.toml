@@ -1,0 +1,9 @@
+[project]
+name = "pi-security-scripts"
+version = "0.1.0"
+description = "Offline-testable safety wrappers for Pi agent retrieval and memory ingestion"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

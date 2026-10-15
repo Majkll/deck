@@ -1,0 +1,70 @@
+name: pi-harness-bootstrap
+version: 0.1.0
+os:
+  distro: debian
+  release: trixie
+  target: raspberry-pi-400
+
+required_software:
+  - pi
+  - fail2ban
+  - curl
+  - wget
+  - astral-uv
+  - python3
+  - NYM
+
+common_skills:
+  - bash
+  - git
+  - networking
+  - grill-me-with-plans
+  - user questions
+  - debian
+  - NYM
+  - python3
+  - using-uv
+
+flavor_a_skills:
+  - caveman
+  - OWASP
+
+flavor_b_skills: []
+
+modes:
+  - bash
+  - flipper
+  - docker
+
+stages:
+  - 00-base
+  - 01-packages
+  - 02-users
+  - 03-security
+  - 04-memory
+  - 05-persona
+  - 06-config
+  - 07-verify
+  - 08-production-gate
+
+runtime:
+  daily_driver: Saturnin
+  default_flavor: sysadmin
+  first_run_choice:
+    - Daily Driver
+    - Special Agent
+
+memory:
+  stack:
+    - pi-memory
+    - karpathy-llm-wiki
+    - qmd
+
+secrets:
+  policy: externalized
+  forbidden_locations:
+    - repo
+    - history
+    - qmd
+    - logs
+    - shell arguments

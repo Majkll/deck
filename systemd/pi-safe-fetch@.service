@@ -1,0 +1,29 @@
+[Unit]
+Description=Pi bounded safe fetch request
+
+[Service]
+Type=simple
+User=pi-safe-fetch
+Group=pi-safe-fetch
+WorkingDirectory=/var/lib/pi-safe-fetch
+ExecStart=/usr/bin/python3 /opt/pi-security/Pi-Scripts/safe_fetch_service.py
+Environment=PI_SAFE_FETCH_POLICY=/etc/pi-security/security-policy.toml
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+ReadWritePaths=/var/lib/pi-safe-fetch
+UMask=0077
+RestrictAddressFamilies=AF_INET AF_INET6
+TimeoutStartSec=20
+TimeoutStopSec=5

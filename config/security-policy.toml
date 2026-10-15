@@ -1,0 +1,28 @@
+version = 1
+workspace = "."
+
+[commands]
+allow = ["git", "ls", "pwd", "rg", "find", "cat", "head", "tail", "printf"]
+max_command_bytes = 4096
+allow_shell_operators = false
+
+[network]
+allowed_schemes = ["https"]
+allowed_domains = []
+max_redirects = 3
+connect_timeout_seconds = 5
+read_timeout_seconds = 15
+max_response_bytes = 1048576
+max_text_bytes = 524288
+
+[paths]
+protected = [
+  ".env", ".env.*", "**/.ssh/**", "**/id_rsa", "**/id_ed25519",
+  "**/.aws/**", "**/.config/gcloud/**", "**/.kube/config",
+  "**/.pi/agent/**", "**/credentials.json", "**/token.json",
+  "**/keyrings/**", "**/*.pem", "**/*.key"
+]
+
+[redaction]
+max_text_bytes = 524288
+max_lines = 10000

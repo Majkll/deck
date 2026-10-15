@@ -1,0 +1,12 @@
+[Unit]
+Description=Pi safe fetch socket
+
+[Socket]
+ListenStream=/run/pi-safe-fetch.sock
+SocketMode=0600
+SocketUser=pi-safe-fetch
+SocketGroup=pi-safe-fetch
+Accept=yes
+
+[Install]
+WantedBy=sockets.target

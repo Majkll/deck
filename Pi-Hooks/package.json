@@ -1,0 +1,7 @@
+{
+  "name": "pi-security-hooks",
+  "private": true,
+  "type": "module",
+  "pi": { "extensions": ["./security-extension.ts"] },
+  "devDependencies": { "@earendil-works/pi-coding-agent": "latest", "typescript": "latest" }
+}

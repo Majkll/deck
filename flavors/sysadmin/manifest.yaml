@@ -1,0 +1,31 @@
+name: sysadmin
+profile: sysadmin-hacker-designer
+persona: Saturnin
+base: daily-driver
+core_skills:
+  - bash
+  - git
+  - networking
+  - grill-me-with-plans
+  - user questions
+  - debian
+  - NYM
+  - python3
+  - using-uv
+  - caveman
+  - OWASP
+required_software:
+  - pi
+  - fail2ban
+  - curl
+  - wget
+  - astral-uv
+  - python3
+  - NYM
+security:
+  allow_network_fetch: false
+  require_policy_review: true
+  redact_secrets: true
+memory:
+  qmd: true
+  karpathy_wiki: true

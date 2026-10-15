@@ -1,0 +1,8 @@
+{
+  "allowedCommands": ["git", "ls", "pwd", "rg", "find", "cat", "head", "tail", "printf"],
+  "workspace": ".",
+  "protectedPatterns": [
+    ".env", ".env.", ".ssh/", ".pi/agent/", "credentials", "token.json", ".pem", ".key"
+  ],
+  "maxCommandBytes": 4096
+}

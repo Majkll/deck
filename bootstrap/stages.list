@@ -1,0 +1,9 @@
+00-base.sh
+01-packages.sh
+02-users.sh
+03-security.sh
+04-memory.sh
+05-persona.sh
+06-config.sh
+07-verify.sh
+08-production-gate.sh
