@@ -231,6 +231,45 @@ class BootstrapPipelineTests(unittest.TestCase):
         self.assertNotIn("run_as_root systemctl enable", security_stage)
         self.assertIn("/opt/pi-security/Pi-Scripts/safe_fetch_service.py", verify_stage)
 
+    def test_users_stage_checks_numeric_group_and_reports_conflicts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            (bin_dir / "getent").write_text(
+                "#!/usr/bin/env bash\n"
+                "case \"$1\" in\n"
+                "  group) printf 'pi-safe-fetch:x:4242:\\n' ;;\n"
+                "  passwd) printf 'pi-safe-fetch:x:987:4242::/var/lib/pi-safe-fetch:/usr/sbin/nologin\\n' ;;\n"
+                "esac\n",
+                encoding="utf-8",
+            )
+            (bin_dir / "id").write_text(
+                "#!/usr/bin/env bash\n"
+                "if [ \"$1\" = -u ]; then echo 0; else printf '%s\\n' \"$TEST_GROUP_IDS\"; fi\n",
+                encoding="utf-8",
+            )
+            for name in ("getent", "id"):
+                (bin_dir / name).chmod(0o755)
+
+            env = os.environ.copy()
+            env["PATH"] = f"{bin_dir}:{env['PATH']}"
+            env["HOME"] = str(root)
+            env["TEST_GROUP_IDS"] = "4242 27"
+
+            result = subprocess.run(
+                ["bash", str(ROOT / "bootstrap" / "02-users.sh")],
+                cwd=str(ROOT),
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("primary_gid=4242 groups=4242 27", result.stderr)
+            self.assertIn("no supplementary groups", result.stderr)
+
     def test_bootstrap_supports_dry_run_mode(self) -> None:
         result = subprocess.run(
             ["bash", str(ROOT / "bootstrap" / "bootstrap.sh"), "--mode", "bash", "--flavor", "sysadmin", "--dry-run"],

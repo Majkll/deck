@@ -20,12 +20,15 @@ run_as_root() {
 }
 
 provision_service_account() {
-  local passwd_entry account_home account_shell account_groups
+  local passwd_entry group_entry account_gid account_home account_shell account_groups service_gid
 
   if ! getent group "$SERVICE_GROUP" >/dev/null 2>&1; then
     echo "[stage:02-users] Creating system group: $SERVICE_GROUP"
     run_as_root groupadd --system "$SERVICE_GROUP"
   fi
+
+  group_entry="$(getent group "$SERVICE_GROUP" || true)"
+  IFS=: read -r _ _ service_gid _ <<< "$group_entry"
 
   passwd_entry="$(getent passwd "$SERVICE_ACCOUNT" || true)"
   if [ -z "$passwd_entry" ]; then
@@ -39,11 +42,11 @@ provision_service_account() {
     exit 1
   fi
 
-  IFS=: read -r _ _ _ _ _ account_home _ account_shell <<< "$passwd_entry"
-  account_groups="$(id -nG "$SERVICE_ACCOUNT" | xargs)"
-  if [ "$account_home" != "$SERVICE_HOME" ] || [ "$account_shell" != "$SERVICE_SHELL" ] || [ "$account_groups" != "$SERVICE_GROUP" ]; then
+  IFS=: read -r _ _ _ account_gid _ account_home _ account_shell <<< "$passwd_entry"
+  account_groups="$(id -G "$SERVICE_ACCOUNT")"
+  if [ "$account_home" != "$SERVICE_HOME" ] || [ "$account_shell" != "$SERVICE_SHELL" ] || [ "$account_gid" != "$service_gid" ] || [ "$account_groups" != "$service_gid" ]; then
     echo "[stage:02-users] FAIL: existing $SERVICE_ACCOUNT does not match the hardened service-account policy." >&2
-    echo "[stage:02-users] Expected home=$SERVICE_HOME shell=$SERVICE_SHELL groups=$SERVICE_GROUP; refusing to rewrite it." >&2
+    echo "[stage:02-users] Found home=$account_home shell=$account_shell primary_gid=$account_gid groups=$account_groups; expected home=$SERVICE_HOME shell=$SERVICE_SHELL primary_gid=$service_gid and no supplementary groups. Refusing to rewrite it." >&2
     exit 1
   fi
 

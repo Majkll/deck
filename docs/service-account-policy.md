@@ -29,7 +29,7 @@ Use a dedicated account such as `pi-safe-fetch` for fetch or network-facing task
 - keep policy files outside ordinary user-writable paths
 - review logs and retention settings separately from the main agent workspace
 
-The default bootstrap creates `pi-safe-fetch` as a system account and group with `/var/lib/pi-safe-fetch` as its private working directory, `/usr/sbin/nologin` as its shell, a locked password, and no supplementary groups. Existing accounts with conflicting settings are rejected rather than rewritten.
+The default bootstrap creates `pi-safe-fetch` as a system account with its dedicated `pi-safe-fetch` primary group, `/var/lib/pi-safe-fetch` as its private working directory, `/usr/sbin/nologin` as its shell, a locked password, and no supplementary groups. Existing accounts with conflicting settings are rejected rather than rewritten; the failure reports the observed home, shell, primary GID, and group IDs so the operator can inspect the conflict before rerunning.
 
 ## Safety rule
 
