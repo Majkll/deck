@@ -42,7 +42,7 @@ provision_service_account() {
     exit 1
   fi
 
-  IFS=: read -r _ _ _ account_gid _ account_home _ account_shell <<< "$passwd_entry"
+  IFS=: read -r _ _ _ account_gid _ account_home account_shell <<< "$passwd_entry"
   account_groups="$(id -G "$SERVICE_ACCOUNT")"
   if [ "$account_home" != "$SERVICE_HOME" ] || [ "$account_shell" != "$SERVICE_SHELL" ] || [ "$account_gid" != "$service_gid" ] || [ "$account_groups" != "$service_gid" ]; then
     echo "[stage:02-users] FAIL: existing $SERVICE_ACCOUNT does not match the hardened service-account policy." >&2

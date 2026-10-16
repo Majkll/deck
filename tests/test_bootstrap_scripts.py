@@ -270,6 +270,45 @@ class BootstrapPipelineTests(unittest.TestCase):
             self.assertIn("primary_gid=4242 groups=4242 27", result.stderr)
             self.assertIn("no supplementary groups", result.stderr)
 
+    def test_users_stage_accepts_newly_provisioned_account(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            (bin_dir / "getent").write_text(
+                "#!/usr/bin/env bash\n"
+                "case \"$1\" in\n"
+                "  group) printf 'pi-safe-fetch:x:4242:\\n' ;;\n"
+                "  passwd) printf 'pi-safe-fetch:x:987:4242::/var/lib/pi-safe-fetch:/usr/sbin/nologin\\n' ;;\n"
+                "esac\n",
+                encoding="utf-8",
+            )
+            (bin_dir / "id").write_text(
+                "#!/usr/bin/env bash\n"
+                "if [ \"$1\" = -u ]; then echo 0; else echo 4242; fi\n",
+                encoding="utf-8",
+            )
+            for name in ("passwd", "install"):
+                (bin_dir / name).write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            for name in ("getent", "id", "passwd", "install"):
+                (bin_dir / name).chmod(0o755)
+
+            env = os.environ.copy()
+            env["PATH"] = f"{bin_dir}:{env['PATH']}"
+            env["HOME"] = str(root)
+
+            result = subprocess.run(
+                ["bash", str(ROOT / "bootstrap" / "02-users.sh")],
+                cwd=str(ROOT),
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            self.assertIn("PASS: hardened service account pi-safe-fetch is ready", result.stdout)
+
     def test_bootstrap_supports_dry_run_mode(self) -> None:
         result = subprocess.run(
             ["bash", str(ROOT / "bootstrap" / "bootstrap.sh"), "--mode", "bash", "--flavor", "sysadmin", "--dry-run"],
