@@ -231,6 +231,50 @@ class BootstrapPipelineTests(unittest.TestCase):
         self.assertNotIn("run_as_root systemctl enable", security_stage)
         self.assertIn("/opt/pi-security/Pi-Scripts/safe_fetch_service.py", verify_stage)
 
+    def test_nymvpn_status_checks_do_not_expand_status_as_a_shell_variable(self) -> None:
+        verify_stage = (ROOT / "bootstrap" / "07-verify.sh").read_text(encoding="utf-8")
+        package_checks = [
+            line for line in verify_stage.splitlines()
+            if line.startswith("check 'NymVPN ")
+        ]
+        self.assertEqual(len(package_checks), 2)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            (bin_dir / "dpkg-query").write_text(
+                "#!/usr/bin/env bash\n"
+                "printf '%s\\n' 'install ok installed'\n",
+                encoding="utf-8",
+            )
+            (bin_dir / "nym-vpnc").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            for name in ("dpkg-query", "nym-vpnc"):
+                (bin_dir / name).chmod(0o755)
+
+            harness = (
+                "set -eu\n"
+                "check() {\n"
+                "  local label=\"$1\" condition=\"$2\"\n"
+                "  if eval \"$condition\"; then printf 'PASS: %s\\n' \"$label\"; "
+                "else printf 'FAIL: %s\\n' \"$label\"; fi\n"
+                "}\n"
+                + "\n".join(package_checks)
+                + "\n"
+            )
+            result = subprocess.run(
+                ["bash", "-c", harness],
+                env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"},
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            self.assertNotIn("unbound variable", result.stderr)
+            self.assertIn("PASS: NymVPN daemon package installed", result.stdout)
+            self.assertIn("PASS: NymVPN CLI package and command available", result.stdout)
+
     def test_users_stage_checks_numeric_group_and_reports_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -72,42 +72,41 @@ cd /path/to/WorkspacePi
 docker build -f deploy/docker/Dockerfile -t pi-harness .
 ```
 
-## Daily driver and flavors
+## Flavors and what they provide
 
-Both flavors inherit the same Saturnin baseline.
+Both flavors use the same Saturnin daily-driver baseline: a practical, privacy-aware assistant profile, local memory/wiki directories, and the shared security runtime. Choose a flavor to set the assistant's role and profile metadata:
 
-- Saturnin: practical, privacy-aware butler persona
-- sysadmin flavor: systems, networking, security, developer workflows
-- scientific flavor: research, writing, literature review, notes, and structured work
+| Flavor | Intended workflow | Flavor-specific profile |
+| --- | --- | --- |
+| **Sysadmin / hacker / designer** | Systems administration, networking and security work, troubleshooting, automation, and hardware/software design or prototyping. | Adds the `caveman` and `OWASP` skill names to the profile. |
+| **Scientific / research / writing** | Literature review and synthesis, scholarly writing, paper drafting, notes, and LaTeX/PDF-oriented workflows. | Selects the `scholarly-research-writing` profile. |
 
-## Required software
+These describe the assistant's intended behavior, not a preinstalled set of specialist applications. The flavor stage records the selection and skill names in user configuration; it does not install agent skills or flavor-specific packages. Both flavors currently receive the same automatic package set.
 
-Core stack:
+## Installed by the automatic flow
 
-- pi
-- fail2ban
-- curl
-- wget
-- astral-uv
-- python3
-- NYM
+On a live, approved Debian bootstrap, the shared stages:
 
-Common skills:
+- install the Debian package bundle (`fail2ban`, `curl`, `wget`, `python3`, `python3-venv`, and CA certificates) if required commands are missing;
+- install the Pi harness (`pi`) and Astral `uv` for the invoking user if absent;
+- check/install the official headless NymVPN daemon and CLI (`nym-vpnd` and `nym-vpnc`), not the desktop app;
+- provision the locked, non-login `pi-safe-fetch` service account and deploy the security runtime, reviewed HTTPS allowlist policy, and systemd units;
+- create the local memory and wiki directories, then write the selected Saturnin/flavor profile and runtime configuration.
 
-- bash
-- git
-- networking
-- grill-me-with-plans
-- user questions
-- debian
-- NYM
-- python3
-- using-uv
+The security stage asks the operator to enter and confirm exact HTTPS hostnames. The safe-fetch socket is installed but remains disabled; review the policy before enabling it. NymVPN packages are installed, but account setup and connecting/configuring the VPN are not performed by bootstrap.
 
-Sysadmin flavor adds:
+## Set up separately or manually
 
-- caveman
-- OWASP
+The following are not installed or completed by the automatic flow:
+
+- Raspberry Pi OS installation/netinstaller and the initial checkout or fetch of this repository;
+- the actual agent skill implementations named in the profiles (including `caveman` and `OWASP`); profile entries are metadata, not skill downloads;
+- a LaTeX distribution, bibliography/research applications, or additional PDF authoring/conversion tools for scientific work;
+- qmd and the Karpathy-style wiki software/indexing tools. Bootstrap creates memory/wiki directories, but does not install or initialize these backends;
+- provider credentials and model/runtime configuration, plus any NymVPN account or connection setup;
+- any additional packages or applications specific to the selected flavor.
+
+Common profile entries such as `git`, `bash`, networking, `debian`, and `python3` are also skill/profile labels, not a promise that the bootstrap installs corresponding agent skills. For checkout preparation and other operator prerequisites, follow the installation steps below and the [production runbook](docs/production-runbook.md).
 
 ## Memory and secrets
 
@@ -185,7 +184,7 @@ For the scientific flavor, use:
 ./bootstrap/bootstrap.sh --mode bash --flavor scientific --approve
 ```
 
-The command authenticates with sudo before stages begin. During security setup, enter exact HTTPS hostnames for the fetch allowlist and confirm the displayed policy. Do not continue with an empty or unreviewed allowlist. The stages install the required Debian packages, user tools, hardened `pi-safe-fetch` account, security runtime, policy, systemd units, memory/persona/configuration, and verification state. The socket is installed but not enabled or started automatically.
+The command authenticates with sudo before stages begin. During security setup, enter exact HTTPS hostnames for the fetch allowlist and confirm the displayed policy. Do not continue with an empty or unreviewed allowlist. The stages install the required Debian packages, user tools, NymVPN daemon and CLI, hardened `pi-safe-fetch` account, security runtime, policy, systemd units, memory/persona/configuration, and verification state. The verifier checks both NymVPN package statuses and confirms that `nym-vpnc` is available on `PATH`. The socket is installed but not enabled or started automatically.
 
 The compatibility entrypoint is also available for inspection and legacy integrations. It accepts and forwards `--approve`, so it can be used for a live install as well:
 
