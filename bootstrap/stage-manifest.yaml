@@ -12,6 +12,7 @@ required_software:
   - wget
   - astral-uv
   - python3
+  - qmd
   - NYM
 
 common_skills:

@@ -1,6 +1,6 @@
 # Deployment adapters
 
-This directory holds the concrete deployment adapters for the phase-based bootstrap pipeline.
+This directory holds deployment adapters for the phase-based bootstrap pipeline. All modes remain in the codebase; current development scope is Bash. Defer FlipperZero and Docker feature work until the Bash setup is solid.
 
 ## Bash adapter
 
@@ -8,8 +8,8 @@ Runs the standard bootstrap flow directly on a target Raspberry Pi through `inst
 
 ## Flipper adapter
 
-Generates a payload-friendly version using the same stage registry and stage logic as the Bash path.
+The existing payload generator remains in the codebase. Feature work is deferred until the Bash setup is solid.
 
 ## Docker adapter
 
-Builds a containerized validation environment for the same logical stages.
+The existing Docker files remain in the codebase. Feature work is deferred until the Bash setup is solid.

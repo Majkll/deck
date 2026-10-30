@@ -1,5 +1,7 @@
 # FlipperZero BadUSB payload notes
 
+> **Current scope:** This mode remains in the codebase, but feature work is deferred until the Bash setup is solid.
+
 This directory holds the payload-generation workflow for the FlipperZero deployment mode.
 
 ## Design intent

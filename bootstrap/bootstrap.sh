@@ -4,6 +4,8 @@ set -eu
 MODE="bash"
 FLAVOR="sysadmin"
 DRY_RUN=false
+ENABLE_QMD=false
+ENABLE_SAFE_FETCH_SOCKET=false
 STAGE_FILTER=""
 STAGE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_REGISTRY="$STAGE_DIR/stages.list"
@@ -12,7 +14,7 @@ STAGES=()
 
 usage() {
   cat <<'EOF'
-Usage: bootstrap.sh --mode <bash|flipper|docker> --flavor <sysadmin|scientific> [--dry-run] [--list-stages] [--stage <stage-name>] [--approve]
+Usage: bootstrap.sh --mode <bash|flipper|docker> --flavor <sysadmin|scientific> [--dry-run] [--list-stages] [--stage <stage-name>] [--approve] [--enable-qmd] [--enable-safe-fetch-socket]
 
 This script launches the deterministic Pi bootstrap pipeline.
 It keeps a single stage definition and allows different deployment adapters.
@@ -138,6 +140,16 @@ while [ "$#" -gt 0 ]; do
       export PI_HARNESS_PRODUCTION_APPROVED=1
       shift
       ;;
+    --enable-qmd)
+      ENABLE_QMD=true
+      export PI_BOOTSTRAP_ENABLE_QMD=1
+      shift
+      ;;
+    --enable-safe-fetch-socket)
+      ENABLE_SAFE_FETCH_SOCKET=true
+      export PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET=1
+      shift
+      ;;
     --list-stages)
       list_stages
       exit 0
@@ -162,6 +174,8 @@ while [ "$#" -gt 0 ]; do
       ;;
   esac
 done
+
+export PATH="${BUN_INSTALL:-${HOME}/.bun}/bin:$PATH"
 
 case "$MODE" in
   bash|flipper|docker)
@@ -189,7 +203,9 @@ fi
 
 require_operator_authentication
 require_production_approval
-log_run "bootstrap start mode=$MODE flavor=$FLAVOR dry_run=$DRY_RUN"
+export PI_BOOTSTRAP_ENABLE_QMD="${ENABLE_QMD:-false}"
+export PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET="${ENABLE_SAFE_FETCH_SOCKET:-false}"
+log_run "bootstrap start mode=$MODE flavor=$FLAVOR dry_run=$DRY_RUN qmd=${PI_BOOTSTRAP_ENABLE_QMD} safe_fetch_socket=${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET}"
 
 # The stage runner keeps a single shared pipeline for bash, flipper, and docker
 # deployments while preserving review-safe defaults for the target Pi.
@@ -208,22 +224,22 @@ for stage in "${STAGES[@]}"; do
   fi
 
   if [ "$DRY_RUN" = true ]; then
-    echo "DRY_RUN: would run $stage (mode: $MODE, flavor: $FLAVOR)"
+    echo "DRY_RUN: would run $stage (mode: $MODE, flavor: $FLAVOR, qmd=${PI_BOOTSTRAP_ENABLE_QMD}, safe_fetch_socket=${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET})"
     log_run "dry_run would run $(basename "$stage")"
     continue
   fi
 
-  echo "==> Running $stage (mode: $MODE, flavor: $FLAVOR)"
+  echo "==> Running $stage (mode: $MODE, flavor: $FLAVOR, qmd=${PI_BOOTSTRAP_ENABLE_QMD}, safe_fetch_socket=${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET})"
   log_run "starting stage $(basename "$stage")"
-  bash "$stage" "$MODE" "$FLAVOR"
+  PI_BOOTSTRAP_ENABLE_QMD="$PI_BOOTSTRAP_ENABLE_QMD" PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET="$PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET" bash "$stage" "$MODE" "$FLAVOR"
   log_run "completed stage $(basename "$stage")"
 done
 
 if [ "$DRY_RUN" = true ]; then
-  echo "DRY_RUN: Bootstrap pipeline preview complete in mode: $MODE, flavor: $FLAVOR"
-  log_run "dry_run complete mode=$MODE flavor=$FLAVOR"
+  echo "DRY_RUN: Bootstrap pipeline preview complete in mode: $MODE, flavor: $FLAVOR, qmd=${PI_BOOTSTRAP_ENABLE_QMD}, safe_fetch_socket=${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET}"
+  log_run "dry_run complete mode=$MODE flavor=$FLAVOR qmd=${PI_BOOTSTRAP_ENABLE_QMD} safe_fetch_socket=${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET}"
   exit 0
 fi
 
-echo "Bootstrap pipeline finished in mode: $MODE, flavor: $FLAVOR"
-log_run "bootstrap complete mode=$MODE flavor=$FLAVOR"
+echo "Bootstrap pipeline finished in mode: $MODE, flavor: $FLAVOR, qmd=${PI_BOOTSTRAP_ENABLE_QMD}, safe_fetch_socket=${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET}"
+log_run "bootstrap complete mode=$MODE flavor=$FLAVOR qmd=${PI_BOOTSTRAP_ENABLE_QMD} safe_fetch_socket=${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET}"

@@ -122,7 +122,22 @@ install_units() {
   run_as_root install -o root -g root -m 644 "$ROOT_DIR/systemd/pi-safe-fetch.socket" "$UNIT_TARGET/pi-safe-fetch.socket"
   run_as_root systemctl daemon-reload
   echo "[stage:03-security] PASS: systemd units installed and daemon reloaded"
-  echo "[stage:03-security] Socket activation is disabled by default. Review, then run: sudo systemctl enable --now pi-safe-fetch.socket"
+  echo "[stage:03-security] Socket activation is disabled by default unless explicitly enabled. Review, then run: sudo systemctl enable --now pi-safe-fetch.socket"
+}
+
+activate_optional_socket() {
+  if [ "${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET:-false}" != "true" ] && [ "${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET:-false}" != "1" ]; then
+    echo "[stage:03-security] INFO: optional safe-fetch socket activation remains disabled by default. Enable it with --enable-safe-fetch-socket or PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET=1."
+    return 0
+  fi
+
+  if ! command -v systemctl >/dev/null 2>&1; then
+    echo "[stage:03-security] FAIL: systemctl is required to activate the safe-fetch socket." >&2
+    exit 1
+  fi
+
+  run_as_root systemctl enable --now pi-safe-fetch.socket
+  echo "[stage:03-security] PASS: safe-fetch socket activation enabled"
 }
 
 main() {
@@ -136,7 +151,8 @@ main() {
   install_policy
   install_runtime
   install_units
-  echo "[stage:03-security] Security runtime deployed; no service was enabled or started."
+  activate_optional_socket
+  echo "[stage:03-security] Security runtime deployed; service activation stays explicit and review-gated."
 }
 
 main "$@"

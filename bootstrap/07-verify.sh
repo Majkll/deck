@@ -38,6 +38,7 @@ check 'debian os-release' '[ -f /etc/os-release ] && grep -qi debian /etc/os-rel
 check 'python3 available' 'command -v python3 >/dev/null 2>&1'
 check 'curl available' 'command -v curl >/dev/null 2>&1'
 check 'wget available' 'command -v wget >/dev/null 2>&1'
+check 'qmd CLI available' 'command -v qmd >/dev/null 2>&1'
 check 'fail2ban available' 'command -v fail2ban-client >/dev/null 2>&1 || command -v fail2ban-server >/dev/null 2>&1'
 check 'NymVPN daemon package installed' 'dpkg-query -W -f='\''${Status}'\'' nym-vpnd 2>/dev/null | grep -q "install ok installed"'
 check 'NymVPN CLI package and command available' 'dpkg-query -W -f='\''${Status}'\'' nym-vpnc 2>/dev/null | grep -q "install ok installed" && command -v nym-vpnc >/dev/null 2>&1'
@@ -53,6 +54,8 @@ check 'security policy is installed and restricted' '[ -f /etc/pi-security/secur
 check 'security policy has an allowlist' 'run_as_root grep -Eq '\''allowed_domains[[:space:]]*=[[:space:]]*\[[^]]+\]'\'' /etc/pi-security/security-policy.toml'
 check 'security runtime is deployed' '[ -f /opt/pi-security/Pi-Scripts/safe_fetch_service.py ] && [ -f /opt/pi-security/Pi-Scripts/safe_fetch.py ] && [ "$(stat -c %U:%G /opt/pi-security/Pi-Scripts/safe_fetch_service.py)" = root:root ]'
 check 'systemd units are installed' '[ -f /etc/systemd/system/pi-safe-fetch.socket ] && [ -f /etc/systemd/system/pi-safe-fetch@.service ] && [ "$(stat -c %U:%G /etc/systemd/system/pi-safe-fetch.socket)" = root:root ]'
+check 'qmd memory collection is registered when enabled' 'if [ "${PI_BOOTSTRAP_ENABLE_QMD:-false}" = "true" ] || [ "${PI_BOOTSTRAP_ENABLE_QMD:-false}" = "1" ]; then qmd collection show memory | grep -Fxq "  Path:     ${HOME}/.local/share/pi-memory/qmd/collections"; else true; fi'
+check 'safe-fetch socket activation is explicit when enabled' '[ "${PI_BOOTSTRAP_ENABLE_SAFE_FETCH_SOCKET:-false}" != "true" ] || systemctl is-enabled --quiet pi-safe-fetch.socket'
 
 if [ "$failures" -gt 0 ]; then
   echo "[stage:07-verify] $failures failed checks out of $checks." | tee -a "$LOG_FILE" >&2

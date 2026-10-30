@@ -8,6 +8,7 @@ Before running the real bootstrap on the target Pi, confirm all of the following
 
 - the target is the correct machine and is not a shared or disposable system unless that is the intent
 - the allowlist values to enter interactively during stage 03 are known and reviewed
+- qmd collection registration is enabled only if the operator has reviewed the local memory-retention behavior
 - the service-account policy in docs/service-account-policy.md is understood and accepted
 - a backup or recovery plan exists for the target state
 - the operator has reviewed the bootstrapping log location and knows how to inspect it later
@@ -42,6 +43,8 @@ cd ~/WorkspacePi
 ```
 
 The pipeline creates `pi-safe-fetch` with `/usr/sbin/nologin`, deploys the policy and runtime under `/etc/pi-security` and `/opt/pi-security`, installs the socket and service units, and leaves socket activation disabled.
+
+qmd is installed for the invoking user from its upstream Bun package as part of stage 01. Add `--enable-qmd` only when the operator wants bootstrap to register the local `memory` collection. To ingest, use `python3 Pi-Scripts/safe_qmd_ingest.py memory` and then run `qmd update`; the wrapper writes sanitized private Markdown artifacts without launching qmd. Bootstrap does not download embedding models or run ingestion.
 
 A dry run is recommended before the first live execution:
 

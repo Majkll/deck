@@ -18,6 +18,7 @@ USER_COMMANDS=(
 
 NYM_VERSION="2026.12.4"
 NYM_RELEASE_URL="https://github.com/nymtech/nym-vpn-client/releases/download/nym-vpn-v${NYM_VERSION}"
+QMD_VERSION="2.8.3"
 
 check_command() {
   local name="$1"
@@ -61,6 +62,35 @@ install_user_tools() {
     echo "[stage:01-packages] Installing uv for the invoking user..."
     curl -fsSL https://astral.sh/uv/install.sh | sh
   fi
+}
+
+install_qmd() {
+  local bun_install="${BUN_INSTALL:-$HOME/.bun}"
+  export PATH="$bun_install/bin:$PATH"
+
+  if command -v qmd >/dev/null 2>&1; then
+    echo "[stage:01-packages] PASS: qmd is available"
+    return 0
+  fi
+
+  if ! command -v bun >/dev/null 2>&1; then
+    echo "[stage:01-packages] Installing Bun for the invoking user..."
+    curl -fsSL https://bun.sh/install | bash
+  fi
+
+  if ! command -v bun >/dev/null 2>&1; then
+    echo "[stage:01-packages] FAIL: Bun installation did not provide the bun command." >&2
+    return 1
+  fi
+
+  echo "[stage:01-packages] Installing upstream qmd @tobilu/qmd@$QMD_VERSION for the invoking user..."
+  bun install --global "@tobilu/qmd@$QMD_VERSION"
+  if ! command -v qmd >/dev/null 2>&1; then
+    echo "[stage:01-packages] FAIL: qmd installation completed without a qmd command on PATH. Add $bun_install/bin to PATH and retry." >&2
+    return 1
+  fi
+
+  echo "[stage:01-packages] PASS: qmd is installed and on PATH"
 }
 
 install_nym() {
@@ -114,6 +144,7 @@ install_packages() {
     ca-certificates
 
   install_user_tools
+  install_qmd
   install_nym
 
   if ! command -v pi >/dev/null 2>&1; then
@@ -144,6 +175,7 @@ main() {
   fi
 
   if [ "$failed" -eq 0 ]; then
+    install_qmd
     install_nym
     echo "[stage:01-packages] Required software is already installed."
     return 0

@@ -8,7 +8,7 @@ DRY_RUN=false
 
 usage() {
   cat <<'EOF'
-Usage: install-target.sh --mode <bash|flipper|docker> --flavor <sysadmin|scientific> [--dry-run] [--approve]
+Usage: install-target.sh --mode <bash|flipper|docker> --flavor <sysadmin|scientific> [--dry-run] [--approve] [--enable-qmd] [--enable-safe-fetch-socket]
 
 This entrypoint delegates to the new multi-stage bootstrap pipeline.
 It is kept for compatibility and reuses the same deterministic stage definitions.
@@ -33,6 +33,14 @@ while [ "$#" -gt 0 ]; do
       APPROVE=true
       shift
       ;;
+    --enable-qmd)
+      ENABLE_QMD=true
+      shift
+      ;;
+    --enable-safe-fetch-socket)
+      ENABLE_SAFE_FETCH_SOCKET=true
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -51,6 +59,12 @@ if [ "$DRY_RUN" = true ]; then
 fi
 if [ "${APPROVE:-false}" = true ]; then
   BOOTSTRAP_ARGS+=(--approve)
+fi
+if [ "${ENABLE_QMD:-false}" = true ]; then
+  BOOTSTRAP_ARGS+=(--enable-qmd)
+fi
+if [ "${ENABLE_SAFE_FETCH_SOCKET:-false}" = true ]; then
+  BOOTSTRAP_ARGS+=(--enable-safe-fetch-socket)
 fi
 
 exec bash "$ROOT_DIR/bootstrap/bootstrap.sh" "${BOOTSTRAP_ARGS[@]}"

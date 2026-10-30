@@ -1,6 +1,6 @@
 # Bootstrap flow
 
-This directory contains the deterministic, multi-stage bootstrap for a fresh Debian Trixie Raspberry Pi 400. The repo is designed to be portable and repeatable: the same stage definitions are used by the bash installer, the FlipperZero payload, and the Docker validation environment.
+This directory contains the deterministic, multi-stage bootstrap for a fresh Debian Trixie Raspberry Pi 400. Bash, FlipperZero, and Docker modes remain in the codebase. Current development scope is the Bash path; defer Flipper and Docker feature work until the Bash setup is solid.
 
 ## Stages
 
@@ -35,6 +35,8 @@ Every live bootstrap run prompts for the operator's sudo password and requires `
 Stage `01-packages.sh` installs the Pi harness and uv for the invoking user. It installs the official headless NymVPN daemon (`nym-vpnd`) and command-line client (`nym-vpnc`) from the Nym release assets using the authenticated sudo session; it does not install the desktop `nym-vpn-app`.
 
 Stage `03-security.sh` asks for exact HTTPS hostnames, confirms the resulting allowlist, installs the policy at `/etc/pi-security/security-policy.toml`, deploys the runtime to `/opt/pi-security/Pi-Scripts`, and installs the safe-fetch systemd units. The socket is deliberately not enabled or started automatically.
+
+Stage `01-packages.sh` also installs upstream qmd `@tobilu/qmd` version 2.8.3 using Bun for the invoking user; it does not use an apt qmd package. Stage `04-memory.sh` registers the `memory` collection only when `--enable-qmd` is selected, and fails if qmd is missing or registration cannot be verified. Ingest sanitized text with `python3 Pi-Scripts/safe_qmd_ingest.py memory`, then run `qmd update` to refresh the index. The wrapper stores private Markdown artifacts; it does not launch qmd or download models. The bootstrap does not start indexing.
 
 ## Shared contract
 
@@ -78,8 +80,28 @@ For inspection before mutation:
 
 ```bash
 ./bootstrap/bootstrap.sh --mode bash --flavor sysadmin
-./bootstrap/bootstrap.sh --mode flipper --flavor scientific
-./bootstrap/bootstrap.sh --mode docker --flavor sysadmin
 ```
 
-The deployment adapter decides how to execute the same stage pipeline, while the stage definitions remain the single source of truth.
+All three mode options remain present. Use Bash for current setup development; Flipper and Docker work is deferred until the Bash setup is solid.
+
+## Complete the target setup
+
+For the full native Raspberry Pi setup, use `--mode bash` and choose either `sysadmin` or `scientific`. Flipper and Docker modes remain in the codebase but are outside the current development scope until the Bash setup is solid. Both flavors install the same automatic package set; the flavor selects profile metadata and does not install specialist applications or agent skills.
+
+After the live bootstrap:
+
+1. Review the run log and installed profile. Confirm all stages completed and inspect `~/.config/pi-harness/active-profile.env`.
+2. Review `/etc/pi-security/security-policy.toml` and confirm its exact HTTPS hostname allowlist is appropriate. The socket stays disabled by default. Only after reviewing the policy and deciding to use the service, enable it with `sudo systemctl enable --now pi-safe-fetch.socket`; check it with `systemctl status pi-safe-fetch.socket`. Do not enable it with an empty or unreviewed policy.
+3. Complete NymVPN account setup and configure/connect the headless client if you need VPN service. Bootstrap installs `nym-vpnd` and `nym-vpnc` but does not configure an account or connect the VPN; consult `nym-vpnc --help` and the vendor's current setup guidance.
+4. Configure the chosen agent runtime with a model/provider and credentials through an OS-managed secret mechanism or runtime injection. Install and configure the actual skill implementations you want; profile skill names are metadata and are not downloaded by bootstrap.
+5. Set up the optional memory and flavor-specific workflows you need. Bootstrap creates the memory/wiki directories, but does not install or initialize qmd or wiki tooling. For scientific work, add the LaTeX, bibliography, research, and PDF tools you use; for sysadmin work, add any specialist tools you require.
+6. Review any separate integrations before relying on them. `Pi-Hooks` is not deployed by the bootstrap pipeline.
+
+Run the system check after completing the installation:
+
+```bash
+./bootstrap/verify-system.sh
+tail -n 50 ~/.local/share/pi-harness/bootstrap.log
+```
+
+The verifier checks the bootstrap's expected binaries and deployed state; it does not certify optional runtime integrations, VPN connectivity, memory indexing, or live systemd behavior. Follow the [production runbook](../docs/production-runbook.md) for the target review and sign-off.

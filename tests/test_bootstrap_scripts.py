@@ -212,6 +212,14 @@ class BootstrapPipelineTests(unittest.TestCase):
         self.assertNotIn("nym-vpn-app", package_stage)
         self.assertNotIn("sudo dpkg", package_stage)
 
+    def test_qmd_uses_pinned_upstream_bun_installation(self) -> None:
+        package_stage = (ROOT / "bootstrap" / "01-packages.sh").read_text(encoding="utf-8")
+
+        self.assertIn('QMD_VERSION="2.8.3"', package_stage)
+        self.assertIn("https://bun.sh/install", package_stage)
+        self.assertIn('bun install --global "@tobilu/qmd@$QMD_VERSION"', package_stage)
+        self.assertNotIn("apt-cache show qmd", package_stage)
+
     def test_compatibility_entrypoint_exposes_approval_flag(self) -> None:
         install_target = (ROOT / "install-target.sh").read_text(encoding="utf-8")
 
@@ -387,6 +395,99 @@ class BootstrapPipelineTests(unittest.TestCase):
         self.assertEqual(stage_result.returncode, 0, msg=stage_result.stderr)
         self.assertIn("00-base.sh", stage_result.stdout)
         self.assertNotIn("01-packages.sh", stage_result.stdout)
+
+    def test_bootstrap_supports_optional_qmd_and_safe_fetch_socket_flags(self) -> None:
+        result = subprocess.run(
+            [
+                "bash",
+                str(ROOT / "bootstrap" / "bootstrap.sh"),
+                "--mode",
+                "bash",
+                "--flavor",
+                "sysadmin",
+                "--dry-run",
+                "--enable-qmd",
+                "--enable-safe-fetch-socket",
+            ],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("qmd=true", result.stdout)
+        self.assertIn("safe_fetch_socket=true", result.stdout)
+
+    def test_memory_stage_creates_opt_in_qmd_collection_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            collections_file = root / "collections.txt"
+            add_log = root / "add.log"
+            fake_qmd = bin_dir / "qmd"
+            fake_qmd.write_text(
+                "#!/usr/bin/env bash\n"
+                "if [ \"$1\" = collection ] && [ \"$2\" = show ]; then\n"
+                "  [ -f \"$QMD_COLLECTIONS_FILE\" ] || exit 1\n"
+                "  printf 'Collection: memory\\n  Path:     %s\\n' \"$(cat \"$QMD_COLLECTIONS_FILE\")\"\n"
+                "elif [ \"$1\" = collection ] && [ \"$2\" = add ]; then\n"
+                "  printf '%s\\n' \"$3\" >> \"$QMD_COLLECTIONS_FILE\"\n"
+                "  printf '%s\\n' \"$*\" >> \"$QMD_ADD_LOG\"\n"
+                "else\n"
+                "  exit 2\n"
+                "fi\n",
+                encoding="utf-8",
+            )
+            fake_qmd.chmod(0o755)
+            env = os.environ.copy()
+            env["HOME"] = tmp
+            env["PI_BOOTSTRAP_ENABLE_QMD"] = "1"
+            env["PATH"] = f"{bin_dir}:{env['PATH']}"
+            env["QMD_COLLECTIONS_FILE"] = str(collections_file)
+            env["QMD_ADD_LOG"] = str(add_log)
+
+            for _ in range(2):
+                result = subprocess.run(
+                    ["/bin/bash", str(ROOT / "bootstrap" / "04-memory.sh"), "bash", "sysadmin"],
+                    cwd=str(ROOT),
+                    env=env,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+            collection_path = root / ".local" / "share" / "pi-memory" / "qmd" / "collections"
+            self.assertTrue(collection_path.exists())
+            self.assertEqual(collections_file.read_text(encoding="utf-8").splitlines(), [str(collection_path)])
+            self.assertEqual(add_log.read_text(encoding="utf-8").splitlines(), [f"collection add {collection_path} --name memory"])
+            self.assertIn("qmd collection 'memory' is registered", result.stdout)
+
+    def test_memory_stage_fails_if_opted_in_qmd_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            for name in ("mkdir", "chmod", "grep"):
+                (bin_dir / name).symlink_to(f"/usr/bin/{name}")
+            env = os.environ.copy()
+            env["HOME"] = tmp
+            env["PI_BOOTSTRAP_ENABLE_QMD"] = "1"
+            env["PATH"] = str(bin_dir)
+
+            result = subprocess.run(
+                ["/bin/bash", str(ROOT / "bootstrap" / "04-memory.sh"), "bash", "sysadmin"],
+                cwd=str(ROOT),
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("qmd is required for --enable-qmd", result.stderr)
 
     def test_bootstrap_requires_explicit_production_gate(self) -> None:
         result = subprocess.run(

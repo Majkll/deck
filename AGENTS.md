@@ -2,7 +2,7 @@
 
 ## Project shape
 
-WorkspacePi bootstraps a fresh Debian Trixie Raspberry Pi into a deterministic Saturnin daily-driver environment. The shared pipeline supports Bash, FlipperZero payload, and Docker validation modes plus `sysadmin` and `scientific` flavors.
+WorkspacePi bootstraps a fresh Debian Trixie Raspberry Pi into a deterministic Saturnin daily-driver environment. The pipeline retains Bash, FlipperZero payload, and Docker modes plus `sysadmin` and `scientific` flavors. Current development scope is the Bash path; defer Flipper and Docker feature work until the Bash setup is solid.
 
 - `bootstrap/bootstrap.sh` owns stage ordering, mode/flavor validation, approval, authentication, logging, and dry-run behavior.
 - `bootstrap/*.sh` contains the stage implementation; keep stages small, idempotent, and explicit about target mutations.
@@ -49,4 +49,3 @@ There is no disposable Debian/systemd integration test in the local suite. Do no
 Prefer existing Bash and Python standard-library patterns. Preserve public command-line flags and compatibility adapters unless the task explicitly changes them. When changing a bootstrap stage, update its nearby tests and the relevant operational documentation. Treat `bootstrap/stage-manifest.yaml` as descriptive metadata, not executable input.
 
 Before proposing a live-install change, consult [docs/production-runbook.md](docs/production-runbook.md), [docs/service-account-policy.md](docs/service-account-policy.md), and [docs/threat-model.md](docs/threat-model.md). Review [tests/test_bootstrap_scripts.py](tests/test_bootstrap_scripts.py) and [tests/test_security.py](tests/test_security.py) for executable expectations.
-

@@ -1,5 +1,7 @@
 # Docker mode
 
+> **Current scope:** This mode remains in the codebase, but feature work is deferred until the Bash setup is solid.
+
 This directory contains the deterministic Docker-based validation mode for the Pi harness bootstrap.
 
 ## Purpose

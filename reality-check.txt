@@ -1,0 +1,35 @@
+WorkspacePi reality check
+========================
+
+1. What is actually implemented
+- bootstrap/bootstrap.sh enforces mode/flavor validation, dry-run semantics, approval, and stage ordering.
+- The stage pipeline is organized by bootstrap/stages.list and is generally review-friendly.
+- 01-packages.sh installs baseline Debian packages, the Pi harness, uv, NymVPN packages, and upstream qmd 2.8.3 through Bun for the invoking user.
+- 02-users.sh hardens the service account pi-safe-fetch with a dedicated group, /usr/sbin/nologin, a locked password, and a private state directory.
+- 03-security.sh installs the policy and runtime under /opt/pi-security and the service units under /etc/systemd/system.
+- 04-memory.sh creates memory and wiki directories; `--enable-qmd` additionally registers and verifies the local `memory` collection.
+- 07-verify.sh verifies system policy, service account configuration, and runtime installation state.
+- 08-production-gate.sh blocks live mutation unless approval is explicitly present.
+
+2. Safety posture that is real in the code
+- The security model is largely fail-closed.
+- Empty allowlists are treated as invalid or intentionally unreviewed.
+- The safe-fetch service rejects non-HTTPS URLs, fragments, credentials, and private IP destinations.
+- The service account and service runtime are treated as a coupled deployment contract.
+- The systemd socket is deliberately not enabled by default.
+
+3. Automation status and remaining limits
+- qmd installation is now a baseline package-stage action, pinned to upstream `@tobilu/qmd` 2.8.3 and checked by bootstrap verification.
+- Collection registration remains opt-in via `--enable-qmd`; bootstrap does not download embedding models or start indexing.
+- `safe_qmd_ingest.py` now sanitizes and stores private, content-addressed Markdown artifacts in the registered collection. Operators run `qmd update` separately to refresh the index.
+- Safe-fetch socket activation is a first-class `--enable-safe-fetch-socket` option and remains disabled by default.
+
+4. Code quality and risk notes
+- The project contains a reasonably defensible security-first structure and explicit approval gates.
+- The source-level bootstrap flow now implements baseline qmd install/verification, explicit opt-in collection registration, sanitized local ingestion, and optional safe-fetch socket activation.
+- The Bun installation script is fetched from upstream at install time; the qmd package version is pinned, but Bun itself is not.
+- The upstream Bun installer and live qmd package installation have not been exercised on a disposable Debian Trixie Pi target; target permissions, indexing, and systemd activation remain unverified here.
+
+5. Result
+- The repository now has first-class, explicit qmd collection and safe-fetch activation paths while preserving the default-disabled network service.
+- Remaining validation is target-side: exercise Bun/qmd installation and indexing on Debian Trixie, then review socket permissions and systemd hardening on a disposable target.

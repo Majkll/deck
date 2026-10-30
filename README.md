@@ -13,7 +13,7 @@ This project is built to do four things well:
 
 ## Core model
 
-The bootstrap is stage-based and shared across all deployment modes:
+The bootstrap is stage-based:
 
 1. base OS readiness
 2. Debian package installation
@@ -25,7 +25,7 @@ The bootstrap is stage-based and shared across all deployment modes:
 8. verification
 9. production gate
 
-The deployment adapter changes, but the stage logic stays the same.
+All three modes remain in the codebase. Current development scope is the Bash path; defer FlipperZero and Docker feature work until the Bash setup is solid.
 
 ## Deployment modes
 
@@ -60,12 +60,16 @@ cd /path/to/WorkspacePi
 
 ### FlipperZero BadUSB payload
 
+This mode remains in the codebase but is outside the current development scope. Revisit it after the Bash setup is solid.
+
 ```bash
 cd /path/to/WorkspacePi
 ./deploy/flipper/generate_payload.sh --flavor sysadmin
 ```
 
 ### Docker validation
+
+This mode remains in the codebase but is outside the current development scope. Revisit it after the Bash setup is solid.
 
 ```bash
 cd /path/to/WorkspacePi
@@ -89,11 +93,45 @@ On a live, approved Debian bootstrap, the shared stages:
 
 - install the Debian package bundle (`fail2ban`, `curl`, `wget`, `python3`, `python3-venv`, and CA certificates) if required commands are missing;
 - install the Pi harness (`pi`) and Astral `uv` for the invoking user if absent;
+- install the upstream qmd CLI (`@tobilu/qmd` 2.8.3) using Bun for the invoking user if qmd is absent;
 - check/install the official headless NymVPN daemon and CLI (`nym-vpnd` and `nym-vpnc`), not the desktop app;
 - provision the locked, non-login `pi-safe-fetch` service account and deploy the security runtime, reviewed HTTPS allowlist policy, and systemd units;
 - create the local memory and wiki directories, then write the selected Saturnin/flavor profile and runtime configuration.
 
 The security stage asks the operator to enter and confirm exact HTTPS hostnames. The safe-fetch socket is installed but remains disabled; review the policy before enabling it. NymVPN packages are installed, but account setup and connecting/configuring the VPN are not performed by bootstrap.
+
+## Optional qmd and safe-fetch activation
+
+The bootstrap keeps collection and network activation intentionally explicit.
+
+- qmd is installed by default, but the memory collection is registered only with `--enable-qmd`.
+- The default bootstrap does not enable the `pi-safe-fetch.socket` activation path.
+- The operator can opt in with either the bootstrap command or the compatibility entrypoint.
+
+Register the `memory` collection explicitly:
+
+```bash
+cd ~/WorkspacePi
+./bootstrap/bootstrap.sh --mode bash --flavor sysadmin --approve --enable-qmd
+```
+
+Enable the optional safe-fetch socket explicitly after policy review:
+
+```bash
+cd ~/WorkspacePi
+./bootstrap/bootstrap.sh --mode bash --flavor sysadmin --approve --enable-safe-fetch-socket
+```
+
+The same flags are accepted by the compatibility entrypoint:
+
+```bash
+cd ~/WorkspacePi
+./install-target.sh --mode bash --flavor sysadmin --approve --enable-qmd --enable-safe-fetch-socket
+```
+
+qmd is installed from its upstream Bun package rather than an apt package. The installer uses the pinned `@tobilu/qmd` 2.8.3 release and runs as the invoking user. Collection registration is opt-in; ingest with `python3 Pi-Scripts/safe_qmd_ingest.py memory`, then run `qmd update` to refresh the index. The wrapper sanitizes and stores one private Markdown file per distinct artifact. Bootstrap does not download embedding models or start indexing automatically.
+
+Use collection registration and socket activation only after reviewing the memory-retention and network policies. The project treats both as operator-approved opt-ins, not automatic startup behavior.
 
 ## Set up separately or manually
 
@@ -102,7 +140,7 @@ The following are not installed or completed by the automatic flow:
 - Raspberry Pi OS installation/netinstaller and the initial checkout or fetch of this repository;
 - the actual agent skill implementations named in the profiles (including `caveman` and `OWASP`); profile entries are metadata, not skill downloads;
 - a LaTeX distribution, bibliography/research applications, or additional PDF authoring/conversion tools for scientific work;
-- qmd and the Karpathy-style wiki software/indexing tools. Bootstrap creates memory/wiki directories, but does not install or initialize these backends;
+- the Karpathy-style wiki software/indexing tools. Bootstrap installs qmd and creates memory/wiki directories; qmd collection registration remains opt-in, and bootstrap does not install wiki tooling;
 - provider credentials and model/runtime configuration, plus any NymVPN account or connection setup;
 - any additional packages or applications specific to the selected flavor.
 
@@ -217,7 +255,7 @@ python3 -m py_compile Pi-Scripts/*.py
 ## Repo layout
 
 - [bootstrap](bootstrap) — deterministic stage scripts and entrypoints
-- [deploy](deploy) — bash, Flipper, and Docker adapters
+- [deploy](deploy) — Bash, Flipper, and Docker adapters; current development scope is Bash
 - [flavors](flavors) — flavor manifests and docs
 - [pantheon](pantheon) — persona definitions like Saturnin
 - [memory](memory) — memory model and layout
@@ -235,7 +273,6 @@ python3 -m py_compile Pi-Scripts/*.py
 ./bootstrap/bootstrap.sh --mode bash --flavor sysadmin --dry-run
 ./bootstrap/bootstrap.sh --mode bash --flavor sysadmin --stage 00-base.sh --dry-run
 ./install-target.sh --mode bash --flavor scientific --dry-run
-./deploy/flipper/generate_payload.sh --flavor sysadmin
 ```
 
 ## Production runbook

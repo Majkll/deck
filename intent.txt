@@ -1,0 +1,42 @@
+WorkspacePi intent (inferred from the codebase)
+===========================================
+
+1. Mission
+- Bootstrap a hardened Debian-based Raspberry Pi daily-driver setup.
+- Preserve a deterministic, reviewable pipeline for Bash, FlipperZero, and Docker flows.
+- Keep the implementation explicit about target-side mutation and operator approval.
+
+2. Primary runtime model
+- The bootstrap entrypoint is bootstrap/bootstrap.sh.
+- It validates mode and flavor, enforces sudo auth and explicit production approval, then runs a staged pipeline.
+- Stage ordering is controlled by bootstrap/stages.list and the stage files in bootstrap/.
+- The Bash path is the current active implementation; Flipper/Docker are adapters, not the main target.
+
+3. Expected operational stages
+- 00-base.sh: establish the baseline target environment.
+- 01-packages.sh: install the Debian and user-level toolchain needed by the harness.
+- 02-users.sh: provision the hardened service account pi-safe-fetch.
+- 03-security.sh: deploy the fail-closed security policy and safe-fetch runtime, plus systemd units.
+- 04-memory.sh: create local memory/wiki directories and optionally configure qmd-backed memory storage.
+- 05-persona.sh: apply the selected sysadmin/scientific default persona.
+- 06-config.sh: finalize runtime config and deployment settings.
+- 07-verify.sh: check the target state and policy compliance.
+- 08-production-gate.sh: gate live mutation behind an explicit approval decision.
+
+4. Security posture intended by the project
+- Live bootstrap must require both sudo authentication and explicit --approve.
+- Dry-run/help/listing operations must remain non-mutating.
+- The service account should be dedicated, locked, shell-less, and isolated from user home state.
+- The policy is fail-closed with a default empty allowlist that requires review before it becomes active.
+- Network access should be HTTPS-only and domain allowlisted.
+- The safe-fetch runtime should be disabled by default until an operator deliberately activates it.
+
+5. qmd / memory layer intention
+- A local memory/wiki store is expected for knowledge retention and memory ingestion.
+- qmd should be handled as a sanitized, opt-in collection layer rather than as an uncontrolled raw storage sink.
+- The intended path is to keep memory collection explicit and to sanitize inputs before they reach qmd.
+
+6. Safe-fetch intention
+- The project wants a restricted fetch path that only allows HTTPS and explicitly approved domains.
+- The service is intended to run under a dedicated system account and be socket-activated only after review.
+- It should fail closed if a policy is invalid or empty.

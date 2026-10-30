@@ -4,6 +4,7 @@ set -eu
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:-bash}"
 FLAVOR="${2:-sysadmin}"
+export PATH="${BUN_INSTALL:-${HOME}/.bun}/bin:$PATH"
 
 check_bin() {
   local name="$1"
@@ -21,7 +22,7 @@ main() {
   echo "mode=$MODE flavor=$FLAVOR"
 
   local failed=0
-  for bin in pi fail2ban-client curl wget python3 uv nym-vpnc; do
+  for bin in pi fail2ban-client curl wget python3 uv qmd nym-vpnc; do
     if ! check_bin "$bin"; then
       failed=1
     fi

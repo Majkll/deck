@@ -80,7 +80,7 @@ class PolicyTests(unittest.TestCase):
                 _redirect_target("https://allowed.example/a", "https://other.example/next", policy)
 
 
-class QmdWrapperTests(unittest.TestCase):
+class WrapperTests(unittest.TestCase):
     def test_check_mode_never_invokes_qmd_and_emits_manifest(self) -> None:
         process = subprocess.run(
             [sys.executable, str(SCRIPTS / "safe_qmd_ingest.py"), "memory", "--check"],
@@ -95,6 +95,56 @@ class QmdWrapperTests(unittest.TestCase):
         self.assertNotIn("super-secret", process.stdout)
         self.assertTrue(manifest["sanitized"])
         self.assertIn("findings", manifest)
+
+    def test_ingest_persists_sanitized_artifact_with_private_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            collection = Path(tmp) / ".local" / "share" / "pi-memory" / "qmd" / "collections"
+            collection.mkdir(parents=True, mode=0o700)
+            collection.chmod(0o700)
+            process = subprocess.run(
+                [sys.executable, str(SCRIPTS / "safe_qmd_ingest.py"), "memory"],
+                input="Authorization: Bearer super-secret-token\nRemember this fact.",
+                text=True,
+                capture_output=True,
+                check=False,
+                env={"PATH": os.environ.get("PATH", ""), "HOME": tmp},
+            )
+
+            self.assertEqual(process.returncode, 0, msg=process.stderr)
+            repeated = subprocess.run(
+                [sys.executable, str(SCRIPTS / "safe_qmd_ingest.py"), "memory"],
+                input="Authorization: ****** this fact.",
+                text=True,
+                capture_output=True,
+                check=False,
+                env={"PATH": os.environ.get("PATH", ""), "HOME": tmp},
+            )
+            self.assertEqual(repeated.returncode, 0, msg=repeated.stderr)
+            result = json.loads(repeated.stdout)
+            artifact = Path(result["artifact"])
+            self.assertEqual(artifact.parent, collection)
+            self.assertEqual(artifact.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(len(list(collection.glob("*.md"))), 1)
+            self.assertNotIn("super-secret-token", artifact.read_text())
+            self.assertIn("this fact.", artifact.read_text())
+
+    def test_ingest_redacts_secrets_before_persisting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            collection = Path(tmp) / ".local" / "share" / "pi-memory" / "qmd" / "collections"
+            collection.mkdir(parents=True, mode=0o700)
+            collection.chmod(0o700)
+            process = subprocess.run(
+                [sys.executable, str(SCRIPTS / "safe_qmd_ingest.py"), "memory"],
+                input="token=super-secret-token",
+                text=True,
+                capture_output=True,
+                check=False,
+                env={"PATH": os.environ.get("PATH", ""), "HOME": tmp},
+            )
+
+            self.assertEqual(process.returncode, 0, msg=process.stderr)
+            artifact = Path(json.loads(process.stdout)["artifact"])
+            self.assertNotIn("super-secret-token", artifact.read_text())
 
 
 class FetchServiceTests(unittest.TestCase):

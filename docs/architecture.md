@@ -36,8 +36,10 @@ This layer is not the whole project anymore; it is a subsystem that the agent ru
 ## Deployment modes
 
 - bash: direct installation on the device
-- flipper: same stage logic in a FlipperZero payload-friendly layout
-- docker: deterministic staging environment for validation and lab reproduction
+- flipper: existing FlipperZero payload adapter; feature work deferred until the Bash setup is solid
+- docker: existing validation environment; feature work deferred until the Bash setup is solid
+
+Bash is the current development focus. Flipper and Docker remain in the codebase but are out of scope until the Bash setup is solid.
 
 ## Secret model
 
